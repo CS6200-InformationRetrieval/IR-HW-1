@@ -1,0 +1,68 @@
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+
+public class XMLParser {
+	static int docCount = 0;
+	public static BufferedReader parseDoc(BufferedReader br) throws IOException
+	{
+		String line="";
+		String docNo="";
+		
+		line = br.readLine();
+		if(line.startsWith("<DOCNO>"))
+		{
+			//Split line and extract DOCNO
+			docNo = line.split(" ")[1].trim();
+		}
+		
+		while((line=br.readLine()).equals("</DOC>"))
+		
+		return br;
+	}
+	
+	public static void parseXMLFile(File xmlfile) throws IOException
+	{
+		BufferedReader br = new BufferedReader(new FileReader(xmlfile));
+		String line = "";
+		
+		while((line = br.readLine())!=null)
+		{
+			if(line.equals("<DOC>"))
+			{
+				docCount++;
+				br = parseDoc(br);
+			}
+		}
+	
+	}
+	
+
+	public static void main(String args[]) throws IOException
+	{
+		//iterate through the given file and parse each file
+		
+		String dataFolderName = "C:\\Users\\kaush_000\\Desktop\\IR\\AP89_DATA\\AP_DATA\\ap89_collection";
+		File dataFolder = new File(dataFolderName);
+		
+		if(dataFolder.exists())
+		{
+			parseXMLFile(new File("C:\\Users\\kaush_000\\Desktop\\IR\\AP89_DATA\\AP_DATA\\ap89_collection\\ap890101"));
+//			for(File xmlfile : dataFolder.listFiles())
+//			{
+//				parseXMLFile(xmlfile);
+//			}
+//			
+			
+			System.out.println("No of Doc's found: "+docCount);
+			
+		}
+		else
+			System.out.println("Given data folder : "+dataFolderName+" doesn't exist");
+		//while parsing each file, put the docs in your index 
+		
+		
+	}
+}

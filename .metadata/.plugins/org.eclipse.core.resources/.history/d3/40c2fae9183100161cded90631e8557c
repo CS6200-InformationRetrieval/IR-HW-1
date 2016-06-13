@@ -1,0 +1,18 @@
+
+public class MyThread extends Thread{
+
+	int start;
+	int end;
+	public MyThread(int start,int end) {
+		this.start = start;
+		this.end = end;
+	}
+	public void run()
+	{
+		for(int i=start;i<end;i++)
+		{
+			String docNo = XMLParser.docIdNoMap.get(i);
+			XMLParser.tokenizeDoc(docNo, docText);
+		}
+	}
+}

@@ -1,0 +1,31 @@
+import java.io.File;
+
+public class Collection {
+
+	public static void main(String args[])
+	{
+		String dataFolderName = "C:\\Users\\kaush_000\\Desktop\\IR\\AP89_DATA\\AP_DATA\\ap89_collection";
+		//String dataFolderName = "C:\\Users\\kaush_000\\Desktop\\IR\\AP89_DATA\\AP_DATA\\test_collection";
+		File dataFolder = new File(dataFolderName);
+
+		if(dataFolder.exists())
+		{
+			for(File xmlfile : dataFolder.listFiles())
+			{
+				System.out.println("filename: "+xmlfile.getName());
+
+				XMLParser.parseXMLFile(xmlfile);
+			
+			}
+
+			//displayTermIdMap();
+			//displayTuples();
+			System.out.println("No of Doc's found: "+docIndex);
+			System.out.println("vocabulary :"+vocabulary);
+
+		}
+		else
+			System.out.println("Given data folder : "+dataFolderName+" doesn't exist");
+		 
+	}
+}

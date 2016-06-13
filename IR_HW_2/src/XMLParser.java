@@ -20,20 +20,23 @@ public class XMLParser {
 	static int vocabulary;
 	static int totalTokens;
 	static HashMap<Integer,String> docIdNoMap = new HashMap<Integer,String>();
-	static HashMap<Integer,ArrayList<Tuple>> docIdTuplesMap = new HashMap<>();
+	static HashMap<String,ArrayList<Tuple>> docIdTuplesMap = new HashMap<>();
 	static HashMap<Integer,String> termIdMap = new HashMap<>();
-	//DF contains the termId and the list of docIds in which the term occured
-	static HashMap<Integer,ArrayList<Integer>> termDFMap = new HashMap<Integer,ArrayList<Integer>>();
-	static HashMap<Integer,Integer> termTTFMap = new HashMap<>();
+	
+	//DF contains the term and the list of docNos in which the term occured
+	static HashMap<String,ArrayList<String>> termDFMap = new HashMap<String,ArrayList<String>>();
+	static HashMap<String,Integer> termTTFMap = new HashMap<>();
 
-	//first integer is docID: inside hashmp, first integer is term ID, second integer is no of times the term occured in a given document
-	static HashMap<Integer, HashMap<Integer,Integer>> termTFMap = new HashMap<>();
+	//first integer is doc No: inside hashmp, first String is term , second integer is no of times the term occured in a given document
+	static HashMap<String, HashMap<String,Integer>> termTFMap = new HashMap<>();
 
 	//hashset to have all the stopwords from stopfile without duplicates
 	static HashSet<String> stopWords = new HashSet<String>();
 
 	//HashMap to hold the complete doc text for each document Number
 	static HashMap<String,String> docNoDoctText = new HashMap<String,String>();
+	//<term,<docNo,<pos1,pos2,pos3>>
+	static HashMap<String,HashMap<String,ArrayList<Integer>>> termDocPositionsMap = new HashMap<>();
 
 	static Stemmer stemmer = new Stemmer();
 
@@ -50,7 +53,7 @@ public class XMLParser {
 		}
 	}
 
-	public static int getKeyFromValue(HashMap<Integer, String> hashmap, String value)
+/*	public static int getKeyFromValue(HashMap<Integer, String> hashmap, String value)
 	{
 		int finalKey=0;
 		if(hashmap.containsValue(value))
@@ -63,7 +66,7 @@ public class XMLParser {
 		}
 		return finalKey;
 	}
-
+*/
 
 //	public static void displayTuples()
 //	{
@@ -93,7 +96,7 @@ public class XMLParser {
 		}
 	}*/
 
-	public static void displayTermDF()
+/*	public static void displayTermDF()
 	{
 		System.out.println("Displaying TermDF:");
 
@@ -111,7 +114,7 @@ public class XMLParser {
 
 
 	}
-
+*/
 /*	public static void displayTermTF()
 	{
 		//		/System.out.println("printing here");
@@ -175,9 +178,7 @@ public class XMLParser {
 				//appending text in different docs with same docNo
 				if(docNoDoctText.containsKey(docNo))
 				{
-					String text = docNoDoctText.get(docNo);
-					text = text+docText.toString();
-					docNoDoctText.put(docNo, text);
+					docNoDoctText.put(docNo,docNoDoctText.get(docNo)+docText.toString());
 				}
 				else
 				{
@@ -188,14 +189,14 @@ public class XMLParser {
 	}
 
 
-	public static void displayTermIdMap()
+	/*public static void displayTermIdMap()
 	{
 		System.out.println("Displaying termID Map in the format : <termId>:<term>");
 		for(int id : termIdMap.keySet())
 		{
 			System.out.println(id+" : "+termIdMap.get(id));
 		}
-	}
+	}*/
 
 
 
@@ -219,78 +220,94 @@ public class XMLParser {
 			position++;
 			String currentToken = tokens.group();
 
-			/*//Comment the below two steps if stopwords and stemming is not considered	
+			//Comment the below two steps if stopwords and stemming is not considered	
 			//to avoid stop words
 			if(stopWords.contains(currentToken.trim().toLowerCase()))
+			{
+				//System.out.println("found stop word: "+currentToken);
 				continue;
+			}
+				
 			//to stem a word before indexing
-			 */	currentToken = stemmer.stem(currentToken);
+			// currentToken = stemmer.stem(currentToken);
 
 			 //add the term to termID map
 
 			 //add token to termId map if it doesn't already exist
-			 if(!termIdMap.containsValue(tokens.group()))
+			 //System.out.println("updating termID Map");
+			 if(!termIdMap.containsValue(currentToken))
 			 {
 				 if(termIdMap.isEmpty())
-					 termIdMap.put(1, tokens.group());
+				 {
+					 termIdMap.put(1, currentToken);
+					
+				 }
+					 
 				 else
-					 termIdMap.put(termIdMap.size()+1, tokens.group());
+				 {
+					 termIdMap.put( termIdMap.size()+1, currentToken);
+					
+				 }
+					 
 			 }
 
 
+			 //System.out.println("updating ttf");
 			 //Update TTF
-			 int termID = getKeyFromValue(termIdMap, tokens.group());
-			 if(termTTFMap.containsKey(termID))
+			 //int termID = getKeyFromValue(termIdMap, tokens.group());
+			 if(termTTFMap.containsKey(currentToken))
 			 {
-				 termTTFMap.put(termID, termTTFMap.get(termID)+1);
+				 termTTFMap.put(currentToken, termTTFMap.get(currentToken)+1);
 			 }
 			 else
 			 {
-				 termTTFMap.put(termID, 1);
+				 termTTFMap.put(currentToken, 1);
 			 }
 
 
 			 //update DF list
-			 int docInd = getKeyFromValue(docIdNoMap, docNo);
+			// int docInd = getKeyFromValue(docIdNoMap, docNo);
 
 
-			 if(termDFMap.containsKey(termID))
+			 //System.out.println("updating df");
+			 if(termDFMap.containsKey(currentToken))
 			 {
-				 ArrayList<Integer> docIds = termDFMap.get(termID);
-				 if(!docIds.contains(docInd))
+				 ArrayList<String> docIds = termDFMap.get(currentToken);
+				 if(!docIds.contains(docNo))
 				 {
-					 docIds.add(docInd);
-					 termDFMap.put(termID, docIds);
+					 docIds.add(docNo);
+					 termDFMap.put(currentToken, docIds);
 				 }
 			 }
 			 else
 			 {
-				 ArrayList<Integer> list = new ArrayList<>();
-				 list.add(docInd);
-				 termDFMap.put(termID, list);
+				 ArrayList<String> list = new ArrayList<>();
+				 list.add(docNo);
+				 termDFMap.put(currentToken, list);
 			 }
 
 
 			 //update TF map
 
-			 if(!termTFMap.containsKey(docInd))
+			 //System.out.println("updating tf");
+			 if(!termTFMap.containsKey(docNo))
 			 {
-				 HashMap<Integer,Integer> tf = new HashMap<Integer,Integer>();
-				 tf.put(termID, 1);
-				 termTFMap.put(docInd, tf);
+				 HashMap<String,Integer> tf = new HashMap<String,Integer>();
+				 tf.put(currentToken, 1);
+				 termTFMap.put(docNo, tf);
 			 }
 			 else
 			 {
-				 HashMap<Integer,Integer> temp = termTFMap.get(docInd);
-				 if(temp.containsKey(termID))
+				 HashMap<String,Integer> temp = termTFMap.get(docNo);
+				 if(temp.containsKey(currentToken))
 				 {
-					 temp.put(termID, temp.get(termID)+1);
-					 termTFMap.put(docInd, temp);
+					 temp.put(currentToken, temp.get(currentToken)+1);
+					 termTFMap.put(docNo, temp);
 				 }
 				 else
 				 {
-					 temp.put(termID, 1);
-					 termTFMap.put(docInd, temp);
+					 temp.put(currentToken, 1);
+					 termTFMap.put(docNo, temp);
 				 }
 
 			 }
@@ -298,26 +315,26 @@ public class XMLParser {
 			 //build a tuple 
 
 			 Tuple t = new Tuple();
-			 t.termId = termID;
+			 t.term = currentToken;
 			 t.docId = docIndex;
 			 t.termPosition = position;
-
-
+			 
+			// System.out.println("updating tuples");
 			 //docIndex already exists
-			 if(docIdTuplesMap.containsKey(docInd))
+			 if(docIdTuplesMap.containsKey(docNo))
 			 {
 
 				 ArrayList<Tuple> tempList = new ArrayList<>();
-				 tempList = docIdTuplesMap.get(docInd);
+				 tempList = docIdTuplesMap.get(docNo);
 				 tempList.add(t);
-				 docIdTuplesMap.put(docInd, tempList);
+				 docIdTuplesMap.put(docNo, tempList);
 
 			 }
 			 else
 			 {
 				 ArrayList<Tuple> list = new ArrayList<>();
 				 list.add(t);
-				 docIdTuplesMap.put(docInd, list);
+				 docIdTuplesMap.put(docNo, list);
 			 }
 		}
 
@@ -327,18 +344,21 @@ public class XMLParser {
 
 	public static void tokenizeDocs()
 	{
+		int count=0;
 		for(String docNo : docNoDoctText.keySet())
 		{
-			
+			count++;
+			if(count%100 == 0)
+				System.out.println("tokenizing doc: "+count++);
 			tokenizeDoc(docNo, docNoDoctText.get(docNo));
 		}
 	}
 
 
-	public static int getDF(int termID)
+	public static int getDF(String term)
 	{
 		int df=0;
-		for(int docID : termDFMap.get(termID))
+		for(String docID : termDFMap.get(term))
 		{
 			df++;
 		}
@@ -346,41 +366,54 @@ public class XMLParser {
 		return df;
 	}
 	
-	public static int getTF(int termID,int docID)
+	public static int getTF(String term, String docNo)
 	{
 		int tf =0;
-		HashMap<Integer, Integer> temp = termTFMap.get(docID);
+		HashMap<String, Integer> temp = termTFMap.get(docNo);
 
 //		System.out.println("docID: "+docID);
 //		System.out.println("termID : "+termID);
-		tf = temp.get(termID);
+		tf = temp.get(term);
 		return tf;
 	}
 
 	public static void writeInvertedIndexFile(String filename) throws IOException
 	{
+		
+		File catalog = new File("C:\\Users\\kaush_000\\Desktop\\IR\\HW2\\catalog.txt");
+		if(!catalog.exists())
+			catalog.createNewFile();
+		
+		BufferedWriter catalogWriter = new BufferedWriter(new FileWriter(catalog));
 		File f = new File(filename);
 		BufferedWriter bw = new BufferedWriter(new FileWriter(f));
-		for(int termID : termIdMap.keySet())
+		int line = 0;
+		
+		for(String term : termIdMap.values())
 		{
+			line++;
+			String catalogContent = term+" "+line;
+					catalogWriter.write(catalogContent);
+			catalogWriter.newLine();
+			catalogWriter.flush();
 			
-			String content = termID+" "+getDF(termID)+" "+termTTFMap.get(termID);
+			String content = term+" "+getDF(term)+" "+termTTFMap.get(term);
 			
-			//list of all the docs where the term occured
+			//list of all the docs where the term occurred
 			StringBuilder sb = new StringBuilder();
-			for(int docID : termDFMap.get(termID))
+			for(String docNo : termDFMap.get(term))
 			{
 				
 				sb.append(" (");
-				sb.append(docID);
+				sb.append(docNo);
 				sb.append(" ");
 				//System.out.println("fetching getTF for term:"+termID +"and docID: "+docID);
-				int tf = getTF(termID,docID);
+				int tf = getTF(term,docNo);
 				sb.append(tf);
 				sb.append(" ");
 				
-				for(Tuple  t: docIdTuplesMap.get(docID)){
-					if(t.termId == termID)
+				for(Tuple  t: docIdTuplesMap.get(docNo)){
+					if(t.term.equals(term))
 					{
 						sb.append(t.termPosition);
 						sb.append("");
@@ -409,15 +442,15 @@ public class XMLParser {
 
 		//iterate through the given file and parse each file
 
-		String dataFolderName = "C:\\Users\\kaush_000\\Desktop\\IR\\AP89_DATA\\AP_DATA\\ap89_collection";
-		//String dataFolderName = "C:\\Users\\kaush_000\\Desktop\\IR\\AP89_DATA\\AP_DATA\\test_collection";
+		//String dataFolderName = "C:\\Users\\kaush_000\\Desktop\\IR\\AP89_DATA\\AP_DATA\\ap89_collection";
+		String dataFolderName = "C:\\Users\\kaush_000\\Desktop\\IR\\AP89_DATA\\AP_DATA\\test_collection";
 		File dataFolder = new File(dataFolderName);
 
 		if(dataFolder.exists())
 		{
 			for(File xmlfile : dataFolder.listFiles())
 			{
-				System.out.println("parsing file : "+xmlfile.getName());
+				//System.out.println("parsing file : "+xmlfile.getName());
 				parseXMLFile(xmlfile);
 			}
 			//takes 3 mins to parse all the given XML files

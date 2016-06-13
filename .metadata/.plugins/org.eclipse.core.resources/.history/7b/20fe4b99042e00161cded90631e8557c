@@ -1,0 +1,267 @@
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.net.HttpURLConnection;
+import java.net.InetAddress;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URL;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+
+
+public class XMLParser {
+	static int docIndex = 0;
+	static int vocabulary;
+	static int totalTokens;
+	//	static HashMap<String, String> docNoTextMap = new HashMap<String,String>();
+	static HashMap<Integer,String> docIdNoMap = new HashMap<Integer,String>();
+	static HashMap<Integer,ArrayList<Tuple>> docIdTuplesMap = new HashMap<>();
+	static HashMap<Integer,String> termIdMap = new HashMap<>();
+	static HashMap<Integer,Integer> termDFMap = new HashMap<>();
+	static HashMap<Integer,Integer> termTTFMap = new HashMap<>();
+
+
+
+	public static void parseDoc(BufferedReader br) throws IOException
+	{
+		String line="";
+
+		StringBuilder docText = new StringBuilder();
+
+
+		while(!(line=br.readLine()).equals("</DOC>"))
+		{
+
+			//Read docNo
+			if(line.startsWith("<DOCNO>"))
+			{
+				String docNo = line.split(" ")[1].trim();
+				if(!docIdNoMap.containsValue(docNo))
+				{
+					docIndex++;
+					docIdNoMap.put(docIndex, docNo);
+				}
+			}
+
+			if(line.equals("<TEXT>"))
+			{
+				while(!(line = br.readLine()).equals("</TEXT>"))
+				{
+					line = line.toLowerCase();
+					docText.append(line+" ");
+				}
+
+			}
+			else
+				continue;
+		}
+
+		//End of reading the text corresponding to a document
+		//Build tokenzier for this doc
+		buildTokens(docText.toString(),docIndex);
+
+	}
+	public static void updateDF(String term,int docId)
+	{
+		
+		//Get the list of tuples w.r.t to given DocId
+		int termId = getKeyFromValue(termIdMap, term);
+		System.err.println("term : "+term+" its term id: "+ termId);
+		ArrayList<Tuple> list = docIdTuplesMap.get(docId);
+		Iterator<Tuple> itr = list.iterator();
+		
+		//return if the list has a term ID for the given term
+		while(itr.hasNext())
+		{
+			Tuple t = itr.next();
+			if(t.termId == termId)
+				return;
+		}
+
+		//update termDFMap if the list doesnt have a termID for the given term
+		if(termDFMap.containsKey(termId))
+		{
+			termDFMap.put(termId, termDFMap.get(termId)+1);
+		}
+		else
+		{
+			termDFMap.put(termId, 1);
+		}
+
+
+	}
+
+	public static void updateTTF(String term)
+	{
+		int termId = getKeyFromValue(termIdMap, term);
+		
+		if(termTTFMap.containsKey(termId))
+		{
+			termTTFMap.put(termId, termTTFMap.get(termId)+1);
+		}
+		else
+		{
+			termTTFMap.put(termId, 1);
+		}
+
+	}
+
+	public static void buildTokens(String docText, int docId)
+	{
+		//System.out.println("id : "+docId+ "text: "+ docText);
+		Pattern pattern = Pattern.compile("(\\w+(\\.?\\w+)*)");
+		Matcher tokens = pattern.matcher(docText);
+		int position =0;
+		ArrayList<Tuple> tuples = new ArrayList<Tuple>();
+		boolean termExistsInDoc = false;
+
+		while(tokens.find())
+		{
+			totalTokens++;
+			position++;
+
+			
+
+
+			//add token to termId map if it doesn't already exist
+			if(!termIdMap.containsValue(tokens.group()))
+			{
+				if(termIdMap.isEmpty())
+					termIdMap.put(1, tokens.group());
+				else
+					termIdMap.put(termIdMap.size()+1, tokens.group());
+			}
+
+			//build a tuple 
+
+			Tuple t = new Tuple();
+			t.termId = getKeyFromValue(termIdMap, tokens.group());
+			t.docId = docIndex;
+			t.termPosition = position;
+
+			tuples.add(t);
+			updateDF(tokens.group(),docId);
+			updateTTF(tokens.group());
+		}
+
+		//add tuples to docIdTuplesMap
+
+		docIdTuplesMap.put(docIndex, tuples);
+	}
+
+	public static int getKeyFromValue(HashMap<Integer, String> hashmap, String value)
+	{
+		int finalKey=0;
+		if(hashmap.containsValue(value))
+		{
+			for(int key : hashmap.keySet())
+			{
+				if(hashmap.get(key).equals(value))
+					finalKey = key;
+			}
+		}
+		return finalKey;
+	}
+
+
+	public static void displayTuples()
+	{
+		for(int documentId : docIdTuplesMap.keySet())
+		{
+			Iterator<Tuple> i = docIdTuplesMap.get(documentId).iterator();
+			while(i.hasNext())
+			{
+				Tuple t = i.next();
+				//System.out.println("("+t.termId+","+t.docId+","+t.termPosition+")");
+
+			}
+		}
+	}
+	
+	public static void displayTermDF()
+	{
+		for(int termID : termDFMap.keySet())
+		{
+			System.out.println(termIdMap.get(termID)+" : "+termDFMap.get(termID));
+		}
+	}
+
+
+	public static void parseXMLFile(File xmlfile) throws IOException
+	{
+		BufferedReader br = new BufferedReader(new FileReader(xmlfile));
+		String line = "";
+
+		while((line = br.readLine())!=null)
+		{
+			if(line.equals("<DOC>"))
+			{
+
+				parseDoc(br);
+			}
+			else
+			{
+				System.out.println("Invalid XML file:"+xmlfile);
+				System.out.println("line found:  -------------------- "+ line);
+
+			}
+
+		}
+
+		vocabulary = termIdMap.size(); //unique terms
+
+
+
+
+		//At this point, all the docs are read and tokens are created for each file
+		//Start indexing
+
+	}
+
+
+	public static void displayTermIdMap()
+	{
+		for(int id : termIdMap.keySet())
+		{
+			System.out.println(id+" : "+termIdMap.get(id));
+		}
+	}
+	public static void main(String args[]) throws IOException
+	{
+		//iterate through the given file and parse each file
+
+		//String dataFolderName = "C:\\Users\\kaush_000\\Desktop\\IR\\AP89_DATA\\AP_DATA\\ap89_collection";
+		String dataFolderName = "C:\\Users\\kaush_000\\Desktop\\IR\\AP89_DATA\\AP_DATA\\test_collection";
+		File dataFolder = new File(dataFolderName);
+
+		if(dataFolder.exists())
+		{
+			for(File xmlfile : dataFolder.listFiles())
+			{
+				System.out.println("filename: "+xmlfile.getName());
+
+				parseXMLFile(xmlfile);
+
+			}
+
+			//displayTermIdMap();
+			//displayTuples();
+			displayTermDF();
+			System.out.println("No of Doc's found: "+docIndex);
+			System.out.println("vocabulary :"+vocabulary);
+
+		}
+		else
+			System.out.println("Given data folder : "+dataFolderName+" doesn't exist");
+
+	}
+}

@@ -1,0 +1,7 @@
+import java.util.HashMap;
+
+public class Document {
+
+	public HashMap<Integer, String> termId = new HashMap<>();
+	 
+}

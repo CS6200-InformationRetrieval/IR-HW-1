@@ -1,0 +1,14 @@
+
+public class MyThread extends Thread{
+
+	int start;
+	int end;
+	public MyThread(int start,int end) {
+		this.start = start;
+		this.end = end;
+	}
+	public void run(int start,int end)
+	{
+		
+	}
+}

@@ -1,0 +1,445 @@
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.lang.reflect.Array;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.concurrent.SynchronousQueue;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+
+
+public class XMLParser {
+	static int docIndex = 0;	
+	static int vocabulary;
+	static int totalTokens;
+	static HashMap<Integer,String> docIdNoMap = new HashMap<Integer,String>();
+	static HashMap<Integer,ArrayList<Tuple>> docIdTuplesMap = new HashMap<>();
+	static HashMap<Integer,String> termIdMap = new HashMap<>();
+	//DF contains the termId and the list of docIds in which the term occured
+	static HashMap<Integer,ArrayList<Integer>> termDFMap = new HashMap<Integer,ArrayList<Integer>>();
+	static HashMap<Integer,Integer> termTTFMap = new HashMap<>();
+
+	//first integer is docID: inside hashmp, first integer is term ID, second integer is no of times the term occured in a given document
+	static HashMap<Integer, HashMap<Integer,Integer>> termTFMap = new HashMap<>();
+
+	//hashset to have all the stopwords from stopfile without duplicates
+	static HashSet<String> stopWords = new HashSet<String>();
+
+	//HashMap to hold the complete doc text for each document Number
+	static HashMap<String,String> docNoDoctText = new HashMap<String,String>();
+
+	static Stemmer stemmer = new Stemmer();
+
+
+	public static void readStopListFile() throws IOException
+	{
+		String stopFile = "C:\\Users\\kaush_000\\Desktop\\IR\\AP89_DATA\\AP_DATA\\stoplist.txt";
+		File f = new File(stopFile);
+		BufferedReader bw = new BufferedReader(new FileReader(f));
+		String line="";
+		while((line = bw.readLine())!=null)
+		{
+			stopWords.add(line.toLowerCase().trim());
+		}
+	}
+
+	public static int getKeyFromValue(HashMap<Integer, String> hashmap, String value)
+	{
+		int finalKey=0;
+		if(hashmap.containsValue(value))
+		{
+			for(int key : hashmap.keySet())
+			{
+				if(hashmap.get(key).equals(value))
+					finalKey = key;
+			}
+		}
+		return finalKey;
+	}
+
+
+//	public static void displayTuples()
+//	{
+//		System.out.println("Display tuples of each document :");
+//		for(int documentId : docIdTuplesMap.keySet())
+//		{
+//			System.out.println("Tuples for Document id: "+documentId);
+//
+//			Iterator<Tuple> i = docIdTuplesMap.get(documentId).iterator();
+//			while(i.hasNext())
+//			{
+//				Tuple t = i.next();
+//				System.out.println("("+t.termId+","+t.docId+","+t.termPosition+")");
+//
+//			}
+//		}
+//	}
+
+	/*public static void displayTermTTF()
+	{
+		System.out.println("Display TermTTF:");
+
+		for(int termId : termTTFMap.keySet())
+		{
+
+			System.out.println(termIdMap.get(termId)+" :  "+termTTFMap.get(termId));
+		}
+	}*/
+
+/*	public static void displayTermDF()
+	{
+		System.out.println("Displaying TermDF:");
+
+		for(int termID : termDFMap.keySet())
+		{	
+			int df  = 0;
+			for(int docID : termDFMap.get(termID))
+			{
+				df++;
+			}
+			System.out.println("term ID: "+termID +"  count: " +df);
+		}
+
+
+
+	}
+*/
+/*	public static void displayTermTF()
+	{
+		//		/System.out.println("printing here");
+		for(int docId : termTFMap.keySet())
+		{
+			System.out.println("doc ID: "+docId);
+			int tf =0;
+			HashMap<Integer, Integer> temp = termTFMap.get(docId);
+
+			for(int termID: temp.keySet())
+			{
+				System.out.println(termID +" :"+temp.get(termID));
+			}
+		}
+	}
+*/
+
+
+
+	public static void parseXMLFile(File xmlfile) throws IOException
+	{
+		BufferedReader br = new BufferedReader(new FileReader(xmlfile));
+		String line = "";
+
+
+		while((line = br.readLine())!=null)
+		{
+			if(line.equals("<DOC>"))
+			{
+
+				//parseDoc(br);
+				String docNo ="";
+				StringBuilder docText = new StringBuilder();
+
+
+				while(!(line=br.readLine()).equals("</DOC>"))
+				{
+
+					//Read docNo
+
+					if(line.startsWith("<DOCNO>"))
+					{
+						docNo = line.split(" ")[1].trim();
+						if(!docIdNoMap.containsValue(docNo))
+						{
+							docIndex++;
+							docIdNoMap.put(docIndex, docNo);
+						}
+					}
+
+					if(line.equals("<TEXT>"))
+					{
+						while(!(line = br.readLine()).equals("</TEXT>"))
+						{
+							line = line.toLowerCase();
+							docText.append(line+" ");
+						}
+
+					}
+				}
+				//appending text in different docs with same docNo
+				if(docNoDoctText.containsKey(docNo))
+				{
+					String text = docNoDoctText.get(docNo);
+					text = text+docText.toString();
+					docNoDoctText.put(docNo, text);
+				}
+				else
+				{
+					docNoDoctText.put(docNo, docText.toString());
+				}
+			}
+		}
+	}
+
+
+	public static void displayTermIdMap()
+	{
+		System.out.println("Displaying termID Map in the format : <termId>:<term>");
+		for(int id : termIdMap.keySet())
+		{
+			System.out.println(id+" : "+termIdMap.get(id));
+		}
+	}
+
+
+
+
+/*	public static void displayDocIdMap()
+	{
+		for(int docId : docIdNoMap.keySet())
+		{
+			System.out.println(docId +" : "+docIdNoMap.get(docId));
+		}
+	}
+*/
+	public static void tokenizeDoc(String docNo, String docText)
+	{
+		Pattern pattern = Pattern.compile("(\\w+(\\.?\\w+)*)");
+		Matcher tokens = pattern.matcher(docText);
+		int position =0;
+
+		while(tokens.find())
+		{
+			position++;
+			String currentToken = tokens.group();
+
+			/*//Comment the below two steps if stopwords and stemming is not considered	
+			//to avoid stop words
+			if(stopWords.contains(currentToken.trim().toLowerCase()))
+				continue;
+			//to stem a word before indexing
+			 */	currentToken = stemmer.stem(currentToken);
+
+			 //add the term to termID map
+
+			 //add token to termId map if it doesn't already exist
+			 if(!termIdMap.containsValue(tokens.group()))
+			 {
+				 if(termIdMap.isEmpty())
+					 termIdMap.put(1, tokens.group());
+				 else
+					 termIdMap.put(termIdMap.size()+1, tokens.group());
+			 }
+
+
+			 //Update TTF
+			 int termID = getKeyFromValue(termIdMap, tokens.group());
+			 if(termTTFMap.containsKey(termID))
+			 {
+				 termTTFMap.put(termID, termTTFMap.get(termID)+1);
+			 }
+			 else
+			 {
+				 termTTFMap.put(termID, 1);
+			 }
+
+
+			 //update DF list
+			 int docInd = getKeyFromValue(docIdNoMap, docNo);
+
+
+			 if(termDFMap.containsKey(termID))
+			 {
+				 ArrayList<Integer> docIds = termDFMap.get(termID);
+				 if(!docIds.contains(docInd))
+				 {
+					 docIds.add(docInd);
+					 termDFMap.put(termID, docIds);
+				 }
+			 }
+			 else
+			 {
+				 ArrayList<Integer> list = new ArrayList<>();
+				 list.add(docInd);
+				 termDFMap.put(termID, list);
+			 }
+
+
+			 //update TF map
+
+			 if(!termTFMap.containsKey(docInd))
+			 {
+				 HashMap<Integer,Integer> tf = new HashMap<Integer,Integer>();
+				 tf.put(termID, 1);
+				 termTFMap.put(docInd, tf);
+			 }
+			 else
+			 {
+				 HashMap<Integer,Integer> temp = termTFMap.get(docInd);
+				 if(temp.containsKey(termID))
+				 {
+					 temp.put(termID, temp.get(termID)+1);
+					 termTFMap.put(docInd, temp);
+				 }
+				 else
+				 {
+					 temp.put(termID, 1);
+					 termTFMap.put(docInd, temp);
+				 }
+
+			 }
+
+			 //build a tuple 
+
+			 Tuple t = new Tuple();
+			 t.termId = termID;
+			 t.docId = docIndex;
+			 t.termPosition = position;
+
+
+			 //docIndex already exists
+			 if(docIdTuplesMap.containsKey(docInd))
+			 {
+
+				 ArrayList<Tuple> tempList = new ArrayList<>();
+				 tempList = docIdTuplesMap.get(docInd);
+				 tempList.add(t);
+				 docIdTuplesMap.put(docInd, tempList);
+
+			 }
+			 else
+			 {
+				 ArrayList<Tuple> list = new ArrayList<>();
+				 list.add(t);
+				 docIdTuplesMap.put(docInd, list);
+			 }
+		}
+
+
+
+	}
+
+	public static void tokenizeDocs()
+	{
+		for(String docNo : docNoDoctText.keySet())
+		{
+			tokenizeDoc(docNo, docNoDoctText.get(docNo));
+		}
+	}
+
+
+	public static int getDF(int termID)
+	{
+		int df=0;
+		for(int docID : termDFMap.get(termID))
+		{
+			df++;
+		}
+
+		return df;
+	}
+	
+	public static int getTF(int termID,int docID)
+	{
+		int tf =0;
+		HashMap<Integer, Integer> temp = termTFMap.get(docID);
+
+		System.out.println("docID: "+docID);
+		System.out.println("termID : "+termID);
+		tf = temp.get(termID);
+		return tf;
+	}
+
+	public static void writeInvertedIndexFile(String filename) throws IOException
+	{
+		File f = new File(filename);
+		BufferedWriter bw = new BufferedWriter(new FileWriter(f));
+		for(int termID : termIdMap.keySet())
+		{
+			System.out.println("termID : "+termID);
+			String content = termID+" "+getDF(termID)+" "+termTTFMap.get(termID);
+			
+			//list of all the docs where the term occured
+			StringBuilder sb = new StringBuilder();
+			for(int docID : termDFMap.keySet())
+			{
+				System.out.println("docID: "+docID);
+				sb.append('(');
+				sb.append(docID);
+				sb.append(" ");
+				sb.append(getTF(termID,docID));
+				sb.append(" ");
+				
+				for(Tuple  t: docIdTuplesMap.get(docID)){
+					if(t.termId == termID)
+					{
+						sb.append(t.termPosition);
+						sb.append("");
+					}
+				}
+				
+				sb.append(')');
+				
+			}
+			content = content+sb.toString();
+			bw.write(content);
+			bw.flush();
+			bw.newLine();
+		}
+		bw.close();
+	
+	}
+
+	public static void main(String args[]) throws IOException
+	{
+
+		long startTime =System.currentTimeMillis();
+		//read stoplist.txt and create stopwords hashset
+		readStopListFile();
+
+
+		//iterate through the given file and parse each file
+
+		//String dataFolderName = "C:\\Users\\kaush_000\\Desktop\\IR\\AP89_DATA\\AP_DATA\\ap89_collection";
+		String dataFolderName = "C:\\Users\\kaush_000\\Desktop\\IR\\AP89_DATA\\AP_DATA\\test_collection";
+		File dataFolder = new File(dataFolderName);
+
+		if(dataFolder.exists())
+		{
+			for(File xmlfile : dataFolder.listFiles())
+			{
+				parseXMLFile(xmlfile);
+			}
+			//takes 3 mins to parse all the given XML files
+		}
+
+
+		System.out.println("total no of docs: "+ docNoDoctText.size());
+
+		tokenizeDocs();
+
+
+		displayTermIdMap();
+		//displayDocIdMap();
+		//displayTuples();
+		//displayTermDF();
+		//displayTermTF();
+		//displayTermTTF();
+		//		System.out.println("No of Doc's found: "+docIndex);
+		//		System.out.println("vocabulary :"+vocabulary);
+
+		System.out.println("writing to Inverted Index file");
+
+		String invertedIndexFileName = "C:\\Users\\kaush_000\\Desktop\\IR\\HW2\\indexfile.txt";
+		writeInvertedIndexFile(invertedIndexFileName);
+
+		System.out.println("time take to parse all docs: "+(System.currentTimeMillis() - startTime));
+
+
+	}
+}

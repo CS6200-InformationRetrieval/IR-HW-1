@@ -1,0 +1,31 @@
+import java.io.File;
+
+public class XMLParser {
+	
+	public static void parseXMLFile(File xmlfile)
+	{
+		
+	}
+	
+
+	public static void main(String args[])
+	{
+		//iterate through the given file and parse each file
+		
+		String dataFolderName = "C:\\Users\\kaush_000\\Desktop\\IR\\AP89_DATA\\AP_DATA\\ap89_collection";
+		File dataFolder = new File(dataFolderName);
+		
+		if(dataFolder.exists())
+		{
+			for(File xmlfile : dataFolder.listFiles())
+			{
+				parseXMLFile(xmlfile);
+			}
+		}
+		else
+			System.out.println("Given data folder : "+dataFolderName+" doesn't exist");
+		//while parsing each file, put the docs in your index 
+		
+		
+	}
+}

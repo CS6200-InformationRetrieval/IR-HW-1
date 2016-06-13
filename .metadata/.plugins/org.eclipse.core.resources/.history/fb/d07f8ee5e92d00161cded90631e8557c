@@ -1,0 +1,8 @@
+import java.util.HashMap;
+
+class Tuple
+{
+	public int termId;
+	public int docId;
+	public int position;
+}

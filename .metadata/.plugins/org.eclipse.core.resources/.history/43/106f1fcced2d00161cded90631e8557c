@@ -1,0 +1,150 @@
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.net.HttpURLConnection;
+import java.net.InetAddress;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URL;
+import java.net.UnknownHostException;
+import java.util.HashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+
+
+public class XMLParser {
+	static int docIndex = 0;
+	static int succesful = 0;
+	static int failure = 0;
+	static int remaining = 0;
+	//	static HashMap<String, String> docNoTextMap = new HashMap<String,String>();
+	static HashMap<Integer,String> docIdNoMap = new HashMap<Integer,String>();
+	static HashMap<Integer,Tuple[]> docIdTuplesMap = new HashMap<>();
+	static HashMap<Integer,String> termIdMap = new HashMap<>();
+
+	public static BufferedReader parseDoc(BufferedReader br) throws IOException
+	{
+		String line="";
+
+		StringBuilder docText = new StringBuilder();
+
+		while(!(line=br.readLine()).equals("</DOC>"))
+		{
+
+			//Read docNo
+			if(line.startsWith("<DOCNO>"))
+			{
+				String docNo = line.split(" ")[1].trim();
+				if(!docIdNoMap.containsValue(docNo))
+				{
+					docIndex++;
+					docIdNoMap.put(docIndex, docNo);
+				}
+			}
+
+			if(line.equals("<TEXT>"))
+			{
+				while(!(line = br.readLine()).equals("</TEXT>"))
+				{
+					docText.append(line+" ");
+				}
+
+			}
+			else
+				continue;
+		}
+
+		//End of reading the text corresponding to a document
+		//Build tokenzier for this doc
+		buildTokens(docText.toString(),docIndex);
+
+
+		return br;
+	}
+
+	public static void buildTokens(String docText, int docId)
+	{
+		//System.out.println("id : "+docId+ "text: "+ docText);
+		Pattern pattern = Pattern.compile("(\\w+(\\.?\\w+)*)");
+		Matcher tokens = pattern.matcher(docText);
+		while(tokens.find())
+		{
+			System.out.println(tokens.group());
+			//add token to termId map if it doesn't already exist
+			if(!termIdMap.containsValue(tokens.group()))
+			{
+				if(termIdMap.isEmpty())
+					termIdMap.put(1, tokens.group());
+				else
+					termIdMap.put(termIdMap.size()+1, tokens.group());
+			}
+			 
+		}
+
+	}
+
+
+
+	public static void parseXMLFile(File xmlfile) throws IOException
+	{
+		BufferedReader br = new BufferedReader(new FileReader(xmlfile));
+		String line = "";
+
+		while((line = br.readLine())!=null)
+		{
+			if(line.equals("<DOC>"))
+			{
+
+				br = parseDoc(br);
+			}
+			else
+			{
+				System.out.println("Invalid XML file:"+xmlfile);
+				System.out.println("line found:  -------------------- "+ line);
+
+			}
+
+		}
+
+	}
+
+
+	public static void displayTermIdMap()
+	{
+		for(String token : termIdMap.values())
+		{
+			System.out.println(termIdMap.get(token) +":"+token);
+		}
+	}
+	public static void main(String args[]) throws IOException
+	{
+		//iterate through the given file and parse each file
+
+		//String dataFolderName = "C:\\Users\\kaush_000\\Desktop\\IR\\AP89_DATA\\AP_DATA\\ap89_collection";
+		String dataFolderName = "C:\\Users\\kaush_000\\Desktop\\IR\\AP89_DATA\\AP_DATA\\test_collection";
+		File dataFolder = new File(dataFolderName);
+
+		if(dataFolder.exists())
+		{
+			for(File xmlfile : dataFolder.listFiles())
+			{
+
+				parseXMLFile(xmlfile);
+				displayTermIdMap();
+			}
+
+			System.out.println("No of Doc's found: "+docIndex);
+			System.out.println("Succesfully created docs: "+ succesful);
+			System.out.println("Failed docs: "+ failure);
+			System.out.println("remaining docs: "+ remaining);
+
+		}
+		else
+			System.out.println("Given data folder : "+dataFolderName+" doesn't exist");
+		 
+	}
+}

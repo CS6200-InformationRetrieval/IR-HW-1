@@ -1,0 +1,13 @@
+import java.io.File;
+
+public class RetrievalModels {
+
+	public static void main(String args[])
+	{
+		//Read each line in the given Query file
+		
+		File queryFile = new File();
+		
+		
+	}
+}
