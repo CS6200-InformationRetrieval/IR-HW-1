@@ -18,6 +18,7 @@ import org.elasticsearch.action.admin.indices.create.CreateIndexRequestBuilder;
 import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.transport.TransportClient;
+import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 
@@ -27,19 +28,28 @@ public class XMLParser {
 	static int succesful = 0;
 	static int failure = 0;
 	static int remaining = 0;
-	static HashMap<String, String> docNoTextMap = new HashMap<String,String>();
+//	static HashMap<String, String> docNoTextMap = new HashMap<String,String>();
+	static HashMap<Integer,String> docIdNoMap = new HashMap<Integer,String>();
+	static HashMap<Integer,Tuple[]> docTupesMap = new HashMap<>();
+	
 	
 	public static BufferedReader parseDoc(BufferedReader br) throws IOException
 	{
 		String line="";
-		String docNo="";
+		
 		StringBuilder docText = new StringBuilder();
 		
 		while(!(line=br.readLine()).equals("</DOC>"))
 		{
 			if(line.startsWith("<DOCNO>"))
 			{
-				docNo = line.split(" ")[1].trim();
+				String docNo = line.split(" ")[1].trim();
+				//add docNo to the docIdNoMap if the docNo doesn't already exist in the map
+				 if(!docIdNoMap.containsValue(docNo))
+				 {
+					 docIndex++;
+					 docIdNoMap.put(docIndex, docNo);
+				 }
 				
 			}
 			
@@ -91,12 +101,12 @@ public class XMLParser {
         else if(connection.getResponseCode() == 400)
         {
         	failure++;
-        	System.out.println("response code: 400");
+        	//System.out.println("response code: 400");
         }
         else
         {
         	remaining++;
-        	System.out.println("response code: "+ connection.getResponseCode());
+        	//System.out.println("response code: "+ connection.getResponseCode());
         }
 	}
 	
